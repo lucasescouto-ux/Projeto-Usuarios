@@ -20,6 +20,7 @@ class User {
      */
     constructor (name, gender, birth, country, email, password, photo, admin){
 
+        this._id;
         this._name = name;
         this._gender = gender;
         this._birth = birth;
@@ -30,6 +31,10 @@ class User {
         this._admin = admin;
         this._register = new Date();
 
+    }
+
+    get id() {
+        return this._id;
     }
 
     get register() {
@@ -89,8 +94,129 @@ class User {
 
             }
 
+        }
+
+    }
+
+    /**
+     * Recupera todos os usuários gravados no localStorage.
+     
+     @returns {Array<Object>} Lista de usuários armazenados.
+     */
+    static getUsersStorage () {
+
+        let users = [];
+
+        if (localStorage.getItem("users")) {
+
+            users = JSON.parse(localStorage.getItem("users"));
 
         }
+
+        let usersID = parseInt(localStorage.getItem("usersID")) || 0;
+        let hasChanges = false;
+
+        users.forEach(user => {
+
+            if (!user._id) {
+
+                usersID++;
+                user._id = usersID;
+                hasChanges = true;
+
+            } else if (user._id > usersID) {
+
+                usersID = user._id;
+                hasChanges = true;
+
+            }
+
+        });
+
+        if (hasChanges) {
+
+            localStorage.setItem("usersID", usersID);
+            localStorage.setItem("users", JSON.stringify(users));
+
+        }
+
+        return users
+
+    }
+
+    /**
+     * Gera o próximo ID sequencial usado no cadastro de usuários.
+     *
+      @returns {number} Novo ID do usuário.
+     */
+    getNewID() {
+
+        let usersID = parseInt(localStorage.getItem("usersID"));
+
+        if (!usersID) usersID = 0;
+
+        usersID++;
+
+        localStorage.setItem("usersID", usersID);
+
+        return usersID;
+
+    }
+
+    /**
+     * Salva o usuário atual no localStorage.
+     *
+     * Quando o usuário já possui ID, atualiza o registro existente. Caso
+     * contrário, gera um novo ID e adiciona o usuário na lista armazenada.
+     */
+    save() {
+
+        let users = User.getUsersStorage();
+
+        if (this.id > 0) {
+
+            users.map(u => {
+
+                if (u._id == this._id) {
+
+                    Object.assign(u, this)
+
+                }
+
+                return u;
+
+            });
+
+        } else {
+
+            this._id = this.getNewID();
+
+            users.push(this);
+
+        }
+
+        localStorage.setItem("users", JSON.stringify(users));
+
+    }
+
+    /**
+     * Remove o usuário atual do localStorage usando seu ID.
+     */
+    remove() {
+
+        let users = User.getUsersStorage();
+
+        users.forEach((userData, index) => {
+
+            if (this._id == userData._id) {
+
+                users.splice(index, 1)
+
+            }
+
+        });
+
+        localStorage.setItem("users", JSON.stringify(users));
 
     }
 

@@ -60,6 +60,9 @@ class UserController {
 
             let result = Object.assign({}, userOld, values);
 
+            result._id = userOld._id;
+            result._register = userOld._register;
+
             this.getPhoto(this.formUpdateEl).then(
                 (content) => {
 
@@ -73,11 +76,11 @@ class UserController {
 
                     user.loadFromJSON(result);
 
+                    user.save();
+
                     this.getTr(user, tr);
 
                     this.updateCount();
-
-                    this.updateStorage(index, user);
 
                     this.formUpdateEl.reset();
             
@@ -121,7 +124,7 @@ class UserController {
 
                     values.photo = content;
 
-                    this.insert(values);
+                    values.save();
 
                     this.addLine(values);
 
@@ -245,30 +248,11 @@ class UserController {
     }
 
     /**
-     * Recupera todos os usuários gravados no localStorage.
-     
-     @returns {Array<Object>} Lista de usuários armazenados.
-     */
-    getusersStorage () {
-
-        let users = [];
-
-        if (localStorage.getItem("users")) {
-
-            users = JSON.parse(localStorage.getItem("users"));
-
-        }
-
-        return users
-
-    }
-
-    /**
      * Carrega os usuários salvos e adiciona cada um deles à tabela.
      */
     selectAll() {
        
-        let users = this.getusersStorage();
+        let users = User.getUsersStorage();
         
         users.forEach(dataUser => {
 
@@ -282,53 +266,6 @@ class UserController {
 
     }
 
-    /**
-     * Insere um novo usuário no armazenamento local.
-     *
-      @param {User} data Usuário que será salvo.
-     */
-    insert(data) {
-
-        let users = this.getusersStorage();
-
-        users.push(data);
-
-        // sessionStorage.setItem("users", JSON.stringify(users));
-        localStorage.setItem("users", JSON.stringify(users));
-
-    }
-
-    /**
-     * Atualiza um usuário existente no armazenamento local.
-     *
-      @param {number|string} index Posição do usuário na lista armazenada.
-      @param {User} user Usuário atualizado.
-     */
-    updateStorage(index, user) {
-
-        let users = this.getusersStorage();
-
-        users[index] = user;
-
-        localStorage.setItem("users", JSON.stringify(users));
-
-    }
-
-    /**
-     * Remove um usuário do armazenamento local.
-     *
-      @param {number} index Posição do usuário na lista armazenada.
-     */
-    deleteStorage(index) {
-
-        let users = this.getusersStorage();
-
-        users.splice(index, 1);
-
-        localStorage.setItem("users", JSON.stringify(users));
-
-    }
-    
     /**
      * Adiciona uma nova linha à tabela e atualiza os contadores.
      *
@@ -386,11 +323,13 @@ class UserController {
 
             if (confirm("Deseja realmente excluir este usuário?")) {
 
-                let index = tr.sectionRowIndex;
+                let user = new User();
+
+                user.loadFromJSON(JSON.parse(tr.dataset.user));
+
+                user.remove();
 
                 tr.remove();
-
-                this.deleteStorage(index);
 
                 this.updateCount();
 
