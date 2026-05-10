@@ -1,5 +1,19 @@
+/**
+ * Controla as ações da tela de usuários.
+ *
+ * Esta classe concentra a comunicação entre os formulários, a tabela HTML e o
+ * armazenamento local do navegador. Ela é responsável por cadastrar, editar,
+ * listar e remover usuários, além de atualizar os indicadores da interface.
+ */
 class UserController {
 
+    /**
+     * Inicializa os elementos principais da tela e registra os eventos.
+     *
+      @param {string} formIdCreate ID do formulário de criação.
+      @param {string} formIdUpdate ID do formulário de edição.
+      @param {string} tableId ID do corpo da tabela de usuários.
+     */
     constructor (formIdCreate, formIdUpdate, tableId){
 
         this.formEl = document.getElementById(formIdCreate);
@@ -12,6 +26,9 @@ class UserController {
 
     }
 
+    /**
+     * Registra os eventos do painel de edição de usuários.
+     */
     onEdit(){
 
         document.querySelector("#box-user-update .btn-cancel").addEventListener("click", e => {
@@ -29,6 +46,11 @@ class UserController {
             btn.disabled = true;
 
             let values = this.getValues(this.formUpdateEl);
+
+            if (!values) {
+                btn.disabled = false;
+                return false;
+            }
 
             let index = this.formUpdateEl.dataset.trIndex;
 
@@ -55,6 +77,8 @@ class UserController {
 
                     this.updateCount();
 
+                    this.updateStorage(index, user);
+
                     this.formUpdateEl.reset();
             
                     this.showPanelCreate();
@@ -63,7 +87,8 @@ class UserController {
 
                 }, 
                 (e) => {
-                    console.error(e)
+                    console.error(e);
+                    btn.disabled = false;
                 }
             );
 
@@ -71,6 +96,9 @@ class UserController {
 
     }
 
+    /**
+     * Registra o envio do formulário de criação de usuários.
+     */
     onSubmit(){
 
         this.formEl.addEventListener("submit", event => {
@@ -83,7 +111,10 @@ class UserController {
 
             let values = this.getValues(this.formEl);
 
-            if (!values) return false;
+            if (!values) {
+                btn.disabled = false;
+                return false;
+            }
 
             this.getPhoto(this.formEl).then(
                 (content) => {
@@ -100,7 +131,8 @@ class UserController {
 
                 }, 
                 (e) => {
-                    console.error(e)
+                    console.error(e);
+                    btn.disabled = false;
                 }
             );
         
@@ -108,6 +140,13 @@ class UserController {
 
     }
 
+    /**
+     * Lê a foto selecionada no formulário e retorna seu conteúdo em Base64.
+     * Caso nenhum arquivo seja selecionado, utiliza uma imagem padrão.
+     
+      @param {HTMLFormElement} formEl Formulário de origem.
+      @returns {Promise<string>} Caminho ou conteúdo Base64 da imagem.
+     */
     getPhoto(formEl){
 
         return new Promise((resolve, reject) => {
@@ -146,6 +185,12 @@ class UserController {
 
     }
 
+    /**
+     * Extrai e valida os campos de um formulário, retornando uma instância de User.
+     *
+      @param {HTMLFormElement} formEl Formulário que será processado.
+      @returns {User|boolean} Usuário montado ou false em caso de validação inválida.
+     */
     getValues(formEl){
 
         let user = {};
@@ -157,6 +202,10 @@ class UserController {
 
                 field.parentElement.classList.add("has-error");
                 isValid = false
+
+            } else if (field.parentElement) {
+
+                field.parentElement.classList.remove("has-error");
 
             }
 
@@ -195,6 +244,11 @@ class UserController {
 
     }
 
+    /**
+     * Recupera todos os usuários gravados no localStorage.
+     
+     @returns {Array<Object>} Lista de usuários armazenados.
+     */
     getusersStorage () {
 
         let users = [];
@@ -209,6 +263,9 @@ class UserController {
 
     }
 
+    /**
+     * Carrega os usuários salvos e adiciona cada um deles à tabela.
+     */
     selectAll() {
        
         let users = this.getusersStorage();
@@ -225,6 +282,11 @@ class UserController {
 
     }
 
+    /**
+     * Insere um novo usuário no armazenamento local.
+     *
+      @param {User} data Usuário que será salvo.
+     */
     insert(data) {
 
         let users = this.getusersStorage();
@@ -235,7 +297,43 @@ class UserController {
         localStorage.setItem("users", JSON.stringify(users));
 
     }
+
+    /**
+     * Atualiza um usuário existente no armazenamento local.
+     *
+      @param {number|string} index Posição do usuário na lista armazenada.
+      @param {User} user Usuário atualizado.
+     */
+    updateStorage(index, user) {
+
+        let users = this.getusersStorage();
+
+        users[index] = user;
+
+        localStorage.setItem("users", JSON.stringify(users));
+
+    }
+
+    /**
+     * Remove um usuário do armazenamento local.
+     *
+      @param {number} index Posição do usuário na lista armazenada.
+     */
+    deleteStorage(index) {
+
+        let users = this.getusersStorage();
+
+        users.splice(index, 1);
+
+        localStorage.setItem("users", JSON.stringify(users));
+
+    }
     
+    /**
+     * Adiciona uma nova linha à tabela e atualiza os contadores.
+     *
+      @param {User} dataUser Usuário que será exibido.
+     */
     addLine(dataUser) {
 
         let tr = this.getTr(dataUser);
@@ -246,6 +344,13 @@ class UserController {
 
     }
 
+    /**
+     * Monta ou atualiza uma linha da tabela com os dados de um usuário.
+     *
+      @param {User} dataUser Usuário que será renderizado.
+      @param {HTMLTableRowElement|null} tr Linha existente, quando for edição.
+      @returns {HTMLTableRowElement} Linha criada ou atualizada.
+     */
     getTr(dataUser, tr = null) {
 
         if (tr === null) tr = document.createElement('tr');
@@ -253,30 +358,39 @@ class UserController {
         tr.dataset.user = JSON.stringify(dataUser);
 
         tr.innerHTML = `
-            <td><img src=${dataUser.photo} class="img-circle img-sm"></td>
+            <td><img src="${dataUser.photo}" alt="User Image" class="img-circle img-sm"></td>
             <td>${dataUser.name}</td>
             <td>${dataUser.email}</td>
             <td>${(dataUser.admin) ? 'Sim' : 'Não'}</td>
             <td>${Utils.dateFormat(dataUser.register)}</td>
             <td>
-                <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
-                <button type="button" class="btn btn-danger btn-delete btn-xs btn-flat">Excluir</button>
+                <button type="button" class="btn btn-primary btn-xs btn-flat btn-edit">Editar</button>
+                <button type="button" class="btn btn-danger btn-xs btn-flat btn-delete">Excluir</button>
             </td>
         `;
 
         this.addEventsTr(tr);
 
-        return tr
+        return tr;
 
     }
 
+    /**
+     * Registra os eventos dos botões de editar e excluir de uma linha da tabela.
+     *
+      @param {HTMLTableRowElement} tr Linha que receberá os eventos.
+     */
     addEventsTr(tr) {
 
-        tr.querySelector(".btn-delete").addEventListener("click", (e) => {
+        tr.querySelector(".btn-delete").addEventListener("click", e => {
 
-            if(confirm("Deseja relamente excluir?")) {
+            if (confirm("Deseja realmente excluir este usuário?")) {
+
+                let index = tr.sectionRowIndex;
 
                 tr.remove();
+
+                this.deleteStorage(index);
 
                 this.updateCount();
 
@@ -299,53 +413,36 @@ class UserController {
                     switch (field.type) {
                         case 'file':
                             continue;
-                            break;
-                            
                         case 'radio':
                             field = this.formUpdateEl.querySelector("[name=" + name.replace("_", "") + "][value=" + json[name] + "]");
                             field.checked = true;
                         break;
-
                         case 'checkbox':
                             field.checked = json[name];
                         break;
-
                         default:
                             field.value = json[name];
-
                     }
 
-                    field.value = json[name];
                 }
 
             }
 
-            this.formUpdateEl.querySelector(".photo").src = json._photo
-            
+            this.formUpdateEl.querySelector(".photo").src = json._photo;
+
             this.showPanelUpdate();
 
         });
 
     }
 
-    showPanelCreate(){
-
-        document.querySelector("#box-user-create").style.display = "block";
-        document.querySelector("#box-user-update").style.display = "none";
-
-    }
-
-    showPanelUpdate(){
-
-        document.querySelector("#box-user-create").style.display = "none";
-        document.querySelector("#box-user-update").style.display = "block";
-
-    }
-
-    updateCount(){
+    /**
+     * Atualiza os cards com a quantidade total de usuários e administradores.
+     */
+    updateCount() {
 
         let numberUsers = 0;
-        let numberAdmin = 0;
+        let numberUsersAdmin = 0;
 
         [...this.tableEl.children].forEach(tr => {
 
@@ -353,11 +450,33 @@ class UserController {
 
             let user = JSON.parse(tr.dataset.user);
 
-            if (user._admin) numberAdmin++;
-        })
+            if (user._admin) numberUsersAdmin++;
+
+        });
 
         document.querySelector("#number-users").innerHTML = numberUsers;
-        document.querySelector("#number-users-admin").innerHTML = numberAdmin;
+        document.querySelector("#number-users-admin").innerHTML = numberUsersAdmin;
 
     }
+
+    /**
+     * Exibe o painel de criação e oculta o painel de edição.
+     */
+    showPanelCreate() {
+
+        document.querySelector("#box-user-create").style.display = "block";
+        document.querySelector("#box-user-update").style.display = "none";
+
+    }
+
+    /**
+     * Exibe o painel de edição e oculta o painel de criação.
+     */
+    showPanelUpdate() {
+
+        document.querySelector("#box-user-create").style.display = "none";
+        document.querySelector("#box-user-update").style.display = "block";
+
+    }
+
 }
